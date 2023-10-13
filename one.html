@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Falling Objects Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, #FF5733, #F61F7D, #871B9A);
+            position: relative;
+        }
+
+        #character {
+            width: 80px;
+            height: 60px;
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .head {
+            width: 15px;
+            height: 20px;
+            background-color: #000;
+            border-radius: 50%;
+            margin: 0 auto;
+        }
+
+        .body {
+            width: 20px;
+            height: 20px;
+            background-color: #000;
+            margin: 5px auto;
+        }
+
+        .legs {
+            width: 5px;
+            height: 10px;
+            background-color: #000;
+            margin: auto;
+        }
+
+        .star {
+            width: 30px;
+            height: 30px;
+            background: #FFD700; /* Yellow background color */
+            position: absolute;
+            top: 10px;
+            left: 0;
+            clip-path: polygon(50% 0%, 61.8% 38.2%, 95.1% 38.2%, 68.2% 61.8%, 80% 100%, 50% 80%, 20% 100%, 31.8% 61.8%, 5.1% 61.8%, 38.2% 38.2%);
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: #fff;
+        }
+
+        #timer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            color: #fff;
+        }
+
+        #welcome-message {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            text-align: center;
+            color: #fff;
+        }
+
+        #level-select-dialog {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #7a7272;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 300px;
+        }
+
+        #level-select-box {
+            text-align: center;
+        }
+
+        #level-select {
+            font-size: 18px;
+            padding: 10px;
+            width: 100%;
+        }
+
+        #start-button {
+            font-size: 16px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #start-button:hover {
+            background-color: #0056b3;
+        }
+        .heading {
+            font-size: larger;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="character">
+            <div class="head"></div>
+            <div class="body"></div>
+                <div class="legs"></div>
+            
+        </div>
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 60</div>
+        <div id="welcome-message">Welcome to<br /><span class="heading">"Star Catcher"</span> </div>
+        <div id="level-select-dialog">
+            <div id="level-select-box">
+                <h3>Choose a Level:</h3>
+                <select id="level-select">
+                    <option value="easy">Easy</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="hard">Hard</option>
+                </select>
+                <button id="start-button">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const character = document.getElementById('character');
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const levelSelectDialog = document.getElementById('level-select-dialog');
+        const levelSelect = document.getElementById('level-select');
+        const startButton = document.getElementById('start-button');
+        let score = 0;
+        let time = 60;
+        let gameTimer;
+        let levelSelected = false;
+
+        const levelSpeeds = {
+            easy: 2,
+            moderate: 3,
+            hard: 4
+        };
+
+        startButton.addEventListener('click', () => {
+            if (!levelSelected) {
+                const selectedLevel = levelSelect.value;
+                const speed = levelSpeeds[selectedLevel];
+                levelSelectDialog.style.display = 'none';
+                levelSelected = true;
+                startGame(speed);
+            }
+        });
+
+        function startGame(speed) {
+            welcomeMessage.style.display = 'none';
+
+            const characterSpeed = 5; // Character movement speed
+            const characterWidth = character.offsetWidth;
+            const containerWidth = gameContainer.offsetWidth;
+            let characterX = containerWidth / 2 - characterWidth / 2;
+
+            // Character movement logic
+            gameContainer.addEventListener('mousemove', (e) => {
+                const x = e.clientX - gameContainer.getBoundingClientRect().left;
+                characterX = x - characterWidth / 2;
+                if (characterX < 0) {
+                    characterX = 0;
+                } else if (characterX > containerWidth - characterWidth) {
+                    characterX = containerWidth - characterWidth;
+                }
+                character.style.left = characterX + 'px';
+            });
+
+            // Game loop for falling stars
+            function createStar() {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.floor(Math.random() * (containerWidth - 50)) + 'px';
+                gameContainer.appendChild(star);
+
+                const fallInterval = setInterval(() => {
+                    const starY = star.offsetTop;
+                    if (starY >= gameContainer.offsetHeight - 50) {
+                        if (isCharacterCatchStar(star, character)) {
+                            gameContainer.removeChild(star); // Remove the star if it's caught
+                            increaseScore();
+                        } else {
+                            gameContainer.removeChild(star);
+                        }
+                        clearInterval(fallInterval);
+                    } else {
+                        star.style.top = starY + speed + 'px';
+                    }
+                }, 20);
+            }
+
+            gameTimer = setInterval(() => {
+                time--;
+                timerDisplay.textContent = 'Time: ' + time;
+                if (time <= 0) {
+                    clearInterval(gameTimer);
+                    const userScore = score;
+                    alert('Game Over! Your Score: ' + userScore);
+
+                    // Reload the page after clicking OK
+                    if (confirm('Start a new game?')) {
+                        window.location.reload();
+                    }
+                }
+            }, 1000);
+
+            // Generate falling stars at an interval
+            const starInterval = setInterval(() => {
+                createStar();
+            }, 4000 / speed);
+        }
+
+        function isCharacterCatchStar(star, character) {
+                const starRect = star.getBoundingClientRect();
+                const characterRect = character.getBoundingClientRect();
+
+                if (
+                    starRect.left < characterRect.right &&
+                    starRect.right > characterRect.left &&
+                    starRect.top < characterRect.bottom &&
+                    starRect.bottom > characterRect.top
+                ) {
+                    return true;
+                }
+
+                return false;
+            }
+
+        function increaseScore() {
+            score++;
+            scoreDisplay.textContent = 'Score: ' + score;
+        }
+    </script>
+</body>
+
+</html>
